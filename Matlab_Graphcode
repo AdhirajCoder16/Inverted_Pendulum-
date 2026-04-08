@@ -1,0 +1,47 @@
+% Parameters
+M = 0.5; m = 0.2; b = 0.1; I = 0.006; g = 9.81; l = 0.3;
+den = I*(M+m) + M*m*l^2;
+
+A = [0      1      0           0;
+     0  -(I+m*l^2)*b/den   (m^2*g*l^2)/den   0;
+     0      0      0           1;
+     0   -(m*l*b)/den     m*g*l*(M+m)/den   0];
+
+B = [0; (I+m*l^2)/den; 0; m*l/den];
+C = [1 0 0 0; 0 0 1 0];
+D = [0; 0];
+
+sys_open = ss(A, B, C, D);
+
+% Stability
+disp('Open-loop poles:'); disp(eig(A));
+
+% LQR
+Q = diag([10 1 100 1]);
+R = 1;
+K = lqr(A, B, Q, R);
+disp('LQR Gain K:'); disp(K);
+
+sys_closed = ss(A - B*K, B, C, D);
+
+% Simulation
+t = 0:0.01:10;
+X0 = [0; 0; 0.1; 0];
+
+[y_open, t_open] = initial(sys_open, X0, t);
+[y_closed, ~]    = initial(sys_closed, X0, t);
+
+% Plot
+figure('Position',[100 100 1200 700]);
+subplot(2,1,1);
+plot(t_open, y_open(:,1),'r--','LineWidth',2); hold on;
+plot(t_open, y_closed(:,1),'b-','LineWidth',2);
+xlabel('Time (s)'); ylabel('Cart Position x (m)'); legend('Open Loop','LQR'); grid on;
+
+subplot(2,1,2);
+plot(t_open, rad2deg(y_open(:,2)),'r--','LineWidth',2); hold on;
+plot(t_open, rad2deg(y_closed(:,2)),'b-','LineWidth',2);
+xlabel('Time (s)'); ylabel('Pendulum Angle θ (deg)'); legend('Open Loop','LQR'); grid on;
+
+sgtitle('Inverted Pendulum - LQR Stabilization');
+saveas(gcf, 'inverted_pendulum_lqr_matlab.png');
